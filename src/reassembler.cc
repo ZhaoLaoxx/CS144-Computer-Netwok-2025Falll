@@ -3,9 +3,8 @@
 
 using namespace std;
 
-void Reassembler::popList(uint64_t firstIdx, bool isLastSubString, std::string& str) {
-  // debug("Reassembler::popList firstUnPopIdx: {} list.getFirstIdx: {} str: {}", firstUnPopIdx, list.getFirstIdx(), str);
-  // 魔法数，todo 优化
+inline void Reassembler::popList(uint64_t firstIdx, bool isLastSubString, std::string& str) {
+  debug("Reassembler::popList firstUnPopIdx: {} list.getFirstIdx: {} str: {}", firstUnPopIdx, list.getFirstIdx(), str);
   if (list.getFirstIdx() != - 1 && firstUnPopIdx >= list.getFirstIdx()) {
     // 当满足条件，可以 pop 最前面的 seg 到 writer 中
     int listFirstIdx = list.getFirstIdx();
@@ -17,9 +16,9 @@ void Reassembler::popList(uint64_t firstIdx, bool isLastSubString, std::string& 
     // 裁剪 str 到合适长度
     uint64_t offerSet = firstUnPopIdx - listFirstIdx;
     if (offerSet >= popStr.size()) return;
-    popStr = popStr.substr(offerSet, min(offerSet + output_.writer().available_capacity(), popStr.size()));
-    output_.writer().push(popStr);
+    popStr = std::move(popStr.substr(offerSet, min(offerSet + output_.writer().available_capacity(), popStr.size())));
     firstUnPopIdx += popStr.size();
+    output_.writer().push(popStr);
   }
   if (isLastSubString) {
     finalIdx = firstIdx + str.size();
@@ -31,7 +30,7 @@ void Reassembler::popList(uint64_t firstIdx, bool isLastSubString, std::string& 
 
 void Reassembler::insert( uint64_t first_index, string data, bool is_last_substring )
 {
-  // debug("Reassembler::insert insert({}, {}, {}) called", first_index, data, is_last_substring);
+  debug("Reassembler::insert insert({}, {}, {}) called", first_index, data, is_last_substring);
   if (output_.writer().is_closed()) return;
 
   // 检查重拍器最前面的一段seg是否满足条件可以pop，如果可以将数据写入到输出流中
@@ -47,15 +46,13 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 // This function is for testing only; don't add extra state to support it.
 uint64_t Reassembler::count_bytes_pending() const
 {
-  std::priority_queue<ReassembleList::Seg> que = list.getQue();
+  std::set<ReassembleList::Seg> que = list.getQue();
   std::set<int> idxSet;
-  while(!que.empty()) {
-    ReassembleList::Seg seg = que.top();
-    que.pop();
-    for (int i = seg.getFirstIdx(); i <= seg.getLastIdx(); i ++) {
+  for(auto seg : que) {
+    for (uint64_t i = seg.getFirstIdx(); i <= seg.getLastIdx(); i ++) {
       idxSet.insert(i);
     }
   }
-  // debug("Reassembler::count_bytes_pending() {}", idxSet.size());
+  debug("Reassembler::count_bytes_pending() {}", idxSet.size());
   return idxSet.size();
 }

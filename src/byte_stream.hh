@@ -32,15 +32,11 @@ protected:
   std::shared_ptr<char[]> str;
   uint64_t readIdx;
   uint64_t writeIdx;
-  // 不能直接 std::mutex lock，因为 std::mutex 不可拷贝（删除delete了构造拷贝函数）
-  // 使用 shared_ptr 就可以多个智能指针管理一个 公共的互斥锁
-  std::shared_ptr<std::mutex> lock;
   bool isWriterClosed;
   uint64_t pushBytes;
   uint64_t popBytes;
   uint64_t bufferBytes;
-  std::shared_ptr<std::mutex> readerLock;
-  std::shared_ptr<std::mutex> writerLock;
+  std::string str_;
 };
 
 class Writer : public ByteStream

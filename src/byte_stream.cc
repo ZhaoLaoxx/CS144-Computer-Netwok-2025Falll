@@ -1,26 +1,32 @@
 #include "byte_stream.hh"
 #include "debug.hh"
+#include <string.h>
 
 using namespace std;
 
 ByteStream::ByteStream(uint64_t capacity) : capacity_(capacity), error_(false), str(make_unique<char[]>(capacity_)),
- readIdx(0), writeIdx(0), lock(make_shared<std::mutex>()), isWriterClosed(false),
-  pushBytes(0), popBytes(0), bufferBytes(0),
-   readerLock(make_shared<std::mutex>()), writerLock(make_shared<std::mutex>()) {}
+ readIdx(0), writeIdx(0), isWriterClosed(false), pushBytes(0), popBytes(0), bufferBytes(0), str_() {}
 
 // Push data to stream, but only as much as available capacity allows.
 void Writer::push(string data)
 {
-  // std::lock_guard<std::mutex> guard(*lock.get());
-  int nums = 0;
-  // debug("pushBytes {} data.size() {}", pushBytes, data.size());
-  for(auto cr : data) {
-    if (bufferBytes == capacity_) break;
-    str.get()[writeIdx ++] = cr;
-    pushBytes ++, bufferBytes ++, nums ++;
-    if (writeIdx >= capacity_) writeIdx -= capacity_;
+  debug("pushBytes {} data.size() {}", pushBytes, data.size());
+  uint64_t cnt = min(data.size(), capacity_ - bufferBytes);
+  if (cnt == 0) return;
+  if (capacity_ - writeIdx < cnt) {
+    // 分两段
+    uint64_t temp1 = capacity_ - writeIdx;
+    uint64_t temp2 = cnt - temp1;
+    memcpy(str.get() + writeIdx, data.data(), temp1);
+    writeIdx = 0;
+    memcpy(str.get() + writeIdx, data.data() + temp1, temp2);
+    writeIdx += temp2;
+  } else {
+    memcpy(str.get() + writeIdx, data.data(), cnt);
+    writeIdx += cnt;
   }
-  // debug("Writer::Push success {} pushBytes {}", nums, pushBytes);
+  bufferBytes += cnt;
+  pushBytes += cnt;
 }
 
 // Signal that the stream has reached its ending. Nothing more will be written.
@@ -40,7 +46,6 @@ bool Writer::is_closed() const
 // How many bytes can be pushed to the stream right now?
 uint64_t Writer::available_capacity() const
 {
-  // std::lock_guard<std::mutex> guard(*lock.get());
   // debug("Writer::available_capacity: {}", capacity_ - bufferBytes);
   return capacity_ - bufferBytes;
 }
@@ -59,7 +64,10 @@ uint64_t Writer::bytes_pushed() const
 string_view Reader::peek() const
 {
   // debug("Reader::peek()");
-  return string_view(str.get() + readIdx, 1);
+  if (readIdx + bufferBytes >= capacity_) {
+    return string_view(str.get() + readIdx, capacity_ - readIdx);
+  }
+  return string_view(str.get() + readIdx, bufferBytes);
 }
 
 // Remove `len` bytes from the buffer.
@@ -67,9 +75,10 @@ void Reader::pop(uint64_t len)
 {
   // debug("Reader::pop({})", len);
   // std::lock_guard<std::mutex> guard(*lock.get());
-  for(uint32_t i = 0; i < len && bufferBytes > 0; readIdx ++, i ++, popBytes ++, bufferBytes -= 1) {
-    if (readIdx >= capacity_) readIdx -= capacity_;
-  }
+  len = min(len, bufferBytes);
+  bufferBytes -= len;
+  readIdx += len;
+  popBytes += len;
   if (readIdx >= capacity_) readIdx -= capacity_;
 }
 

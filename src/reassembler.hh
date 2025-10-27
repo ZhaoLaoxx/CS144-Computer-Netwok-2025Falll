@@ -43,7 +43,7 @@ public:
   const Writer& writer() const { return output_.writer(); }
 
 private:
-  void popList(uint64_t firstIdx, bool isLastSubString, std::string& str);
+  inline void popList(uint64_t firstIdx, bool isLastSubString, std::string& str);
   ByteStream output_;
   ReassembleList list;
   int firstUnPopIdx;
