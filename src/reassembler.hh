@@ -1,12 +1,13 @@
 #pragma once
 
-#include "byte_stream.hh"
+# include "byte_stream.hh"
+# include "dataStructure/reassemblerList.hh"
 
 class Reassembler
 {
 public:
   // Construct Reassembler to write into given ByteStream.
-  explicit Reassembler( ByteStream&& output ) : output_( std::move( output ) ) {}
+  explicit Reassembler( ByteStream&& output ) : output_( std::move( output ) ), list(ReassembleList(output_.getCapacity())), firstUnPopIdx(0),  finalIdx(- 1) {}
 
   /*
    * Insert a new substring to be reassembled into a ByteStream.
@@ -42,5 +43,9 @@ public:
   const Writer& writer() const { return output_.writer(); }
 
 private:
+  inline void popList(uint64_t firstIdx, bool isLastSubString, std::string& str);
   ByteStream output_;
+  ReassembleList list;
+  int firstUnPopIdx;
+  int finalIdx = 0;
 };
