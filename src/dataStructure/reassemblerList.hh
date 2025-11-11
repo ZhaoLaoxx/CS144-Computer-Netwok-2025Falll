@@ -31,6 +31,9 @@ public:
             friend ReassembleList;
     };
     const std::set<ReassembleList::Seg> getQue() const;
+    uint64_t getCapacity() {
+        return capacity_;
+    }
 private:
     std::set<int> firstIdxSet;
     std::set<ReassembleList::Seg> que;

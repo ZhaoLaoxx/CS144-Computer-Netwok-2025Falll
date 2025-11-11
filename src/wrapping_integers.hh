@@ -27,7 +27,15 @@ public:
 
   Wrap32 operator+( uint32_t n ) const { return Wrap32 { raw_value_ + n }; }
   bool operator==( const Wrap32& other ) const { return raw_value_ == other.raw_value_; }
+  void setRawValue(const uint32_t rawValue) {
+    raw_value_ = rawValue;
+  }
+  uint32_t getRawValue() {
+    return raw_value_;
+  }
 
 protected:
   uint32_t raw_value_ {};
+  static const uint64_t mod32 = 0xffffffff;
+  static const uint64_t max32 = (1UL << 32);
 };
